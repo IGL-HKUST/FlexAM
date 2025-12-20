@@ -1,6 +1,6 @@
 # FlexAM: Flexible Appearance-Motion Decomposition for Versatile Video Generation Control
 
-<!-- ![teaser](assets/teaser.gif) -->
+![teaser](assets/teaser.gif)
 
 ## NEWS:
 - Dec 20, 2025: inference code and comfyui
@@ -66,7 +66,7 @@ python webui.py --gpu <gpu_id>
 Or you can run these tasks one by one as follows.
 
 #### 1. Motion Transfer 
-
+![motion_transfer](assets/motion_transfer.gif)
 ---
 
 ```python
@@ -86,7 +86,7 @@ python demo.py \
 
 
 #### 2. foreground edit
-
+![fg_edit](assets/fg_edit.gif)
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
@@ -105,7 +105,7 @@ python demo.py \
 ```
 
 #### 3. background edit
-
+![bg_edit](assets/bg_edit.gif)
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
@@ -122,7 +122,8 @@ python demo.py \
     --gpu <gpu_id> \ # the gpu id
 ```
 
-#### 2. Camera Control
+#### 4. Camera Control
+![camera_ctrl](assets/camera_ctrl.gif)
 
 We provide three camera control methods: 1. Use predefined templates; 2. Use a pose text file (pose txt); 3. Input another video, where the "Pi3" automatically estimates the camera pose from it and applies it to the video to be generated.
 
@@ -214,8 +215,8 @@ python demo.py \
 ```
 
 
-#### 3. Object Manipulation
-
+#### 5. Object Manipulation
+![object](assets/object.gif)
 We provide several template object manipulation types, you can choose one of them. In practice, we find that providing a description of the object motion in prompt will get better results.
 ```python
 python demo.py \

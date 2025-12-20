@@ -1,0 +1,12 @@
+[submodule "submodules/MoGe"]
+	path = submodules/MoGe
+	url = https://github.com/microsoft/MoGe.git
+[submodule "submodules/vggt"]
+	path = submodules/vggt
+	url = https://github.com/facebookresearch/vggt.git
+[submodule "submodules/DELTA"]
+	path = submodules/DELTA
+	url = https://github.com/snap-research/DELTA_densetrack3d.git
+[submodule "submodules/Pi3"]
+	path = submodules/Pi3
+	url = https://github.com/yyfz/Pi3.git

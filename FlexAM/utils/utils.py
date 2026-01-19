@@ -421,6 +421,15 @@ def get_video_to_video_latent(input_video_path, video_length, sample_size, fps=N
             cap.release()
         else:
             input_video = input_video_path
+            if isinstance(input_video, torch.Tensor):
+                import torch.nn.functional as F
+                input_video = F.interpolate(
+                    input_video.permute(0, 3, 1, 2),
+                    size=(sample_size[0], sample_size[1]),
+                    mode='bilinear',
+                    align_corners=False
+                ).permute(0, 2, 3, 1)
+                input_video = input_video.cpu().numpy()
 
         input_video = torch.from_numpy(np.array(input_video))[:video_length]
         input_video = input_video.permute([3, 0, 1, 2]).unsqueeze(0) / 255

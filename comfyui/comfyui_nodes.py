@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 from omegaconf import OmegaConf
 
-from .annotator.nodes import VideoToCanny, VideoToDepth, VideoToPose, VideoToTrackingPredict, VideoToTrackingVisualize, VideoToCosVisualize, VideoTodepthVisualize
+from .annotator.nodes import VideoToCanny, VideoToDepth, VideoToPose, VideoToTrackingPredict, VideoToTrackingVisualize, VideoToCosVisualize, VideoTodepthVisualize, VideoToTrackingVisualizeAll
 # from .motion_video.nodes import VideoToTracking
 from .camera_utils import CAMERA, combine_camera_motion, get_camera_motion
 
@@ -407,6 +407,7 @@ NODE_CLASS_MAPPINGS = {
     "VideoToTrackingVisualize": VideoToTrackingVisualize,
     "VideoToCosVisualize": VideoToCosVisualize,
     "VideoTodepthVisualize": VideoTodepthVisualize,
+    "VideoToTrackingVisualizeAll": VideoToTrackingVisualizeAll,
 
     "CreateTrajectoryBasedOnKJNodes": CreateTrajectoryBasedOnKJNodes,
     "CameraBasicFromChaoJie": CameraBasicFromChaoJie,
@@ -433,6 +434,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "VideoToTrackingVisualize": "Video To 3D Tracking Visualize",
     "VideoToCosVisualize": "Video To Cosine Encoding Visualize",
     "VideoTodepthVisualize": "Video To Depth Visualize",
+    "VideoToTrackingVisualizeAll": "Video To All Tracking Visualizations (Combined)",
 
     "CreateTrajectoryBasedOnKJNodes": "Create Trajectory Based On KJNodes",
     "CameraBasicFromChaoJie": "Camera Basic From ChaoJie",

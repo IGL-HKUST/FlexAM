@@ -858,3 +858,316 @@ class VideoTodepthVisualize:
         output_tensor = torch.from_numpy(np.array(output_frames)).float() / 255.0
 
         return (output_tensor,)
+
+
+class VideoToTrackingVisualizeAll:
+    """Combined node that generates all tracking visualizations (tracking, cos, depth) with optional mask support"""
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "input_video": ("IMAGE",),
+                "pred_tracks": ("TRACKING_DATA",),
+                "pred_visibility": ("TRACKING_DATA",),
+                "point_size": ("INT", {"default": 4, "min": 1, "max": 20, "step": 1}),
+                "cos_level": ("INT", {"default": 4, "min": 1, "max": 8, "step": 1}),
+                "generate_type": (["motion_transfer", "fg_generation", "bg_generation"], {"default": "motion_transfer"}),
+            },
+            "optional": {
+                "mask_video": ("IMAGE",),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE", "IMAGE", "IMAGE", "IMAGE")
+    RETURN_NAMES = ("tracking_video", "depth_video", "cos_level_0", "cos_level_1", "cos_level_2", "cos_level_3")
+    FUNCTION = "process"
+    CATEGORY = "CogVideoXFUNWrapper"
+
+    def valid_mask(self, pixels, W, H):
+        """Check if pixels are within valid image bounds"""
+        return ((pixels[:, 0] >= 0) & (pixels[:, 0] < W) & (pixels[:, 1] > 0) & \
+                 (pixels[:, 1] < H))
+
+    def sort_points_by_depth(self, points, depths):
+        """Sort points by depth values for Z-buffering"""
+        combined = np.hstack((points, depths[:, None]))
+        sort_index = combined[:, -1].argsort()[::-1]
+        sorted_combined = combined[sort_index]
+        sorted_points = sorted_combined[:, :-1]
+        sorted_depths = sorted_combined[:, -1]
+        return sorted_points, sorted_depths, sort_index
+
+    def draw_rectangle(self, rgb, coord, side_length, color=(255, 0, 0)):
+        """Draw a rectangle on the PIL image"""
+        draw = ImageDraw.Draw(rgb)
+        left_up_point = (coord[0] - side_length//2, coord[1] - side_length//2)
+        right_down_point = (coord[0] + side_length//2, coord[1] + side_length//2)
+        color = tuple(list(color))
+
+        draw.rectangle(
+            [left_up_point, right_down_point],
+            fill=tuple(color),
+            outline=tuple(color),
+        )
+
+    def _load_mask_video(self, mask_video, generate_type, num_frames, height, width):
+        """Load and preprocess mask video for fg/bg tracking"""
+        if generate_type not in ['fg_generation', 'bg_generation'] or mask_video is None:
+            return None
+
+        try:
+            # Convert mask_video to the format needed
+            if isinstance(mask_video, torch.Tensor):
+                mask_video_np = mask_video.cpu().numpy()  # [F, H, W, C]
+            else:
+                mask_video_np = np.array(mask_video)
+
+            # Convert [F, H, W, C] to [F, H, W] binary mask
+            if mask_video_np.ndim == 4:
+                mask_video_np = mask_video_np.mean(axis=-1)  # Average across channels
+
+            # Threshold to create binary mask
+            mask_binary = mask_video_np > 0.5
+
+            if generate_type == 'bg_generation':
+                mask_binary = ~mask_binary  # Invert for background tracking
+
+            return mask_binary.astype(np.float32)
+        except Exception as e:
+            print(f"Warning: Could not load mask video: {e}")
+            return None
+
+    def _should_draw_point(self, coord, mask_video, frame_idx, generate_type, width, height):
+        """Check if point should be drawn based on mask filtering"""
+        if mask_video is None or generate_type not in ['fg_generation', 'bg_generation']:
+            return True
+
+        x, y = coord
+        if 0 <= x < width and 0 <= y < height:
+            return mask_video[frame_idx, int(y), int(x)] > 0.5
+        return False
+
+    def generate_colors_from_points(self, first_frame_points, num_points, height, width):
+        """Generate colors based on first frame point coordinates"""
+        colors = np.zeros((num_points, 3), dtype=np.uint8)
+
+        # Normalize and map u coordinate to red channel
+        u_min, u_max = 0, width
+        u_normalized = np.clip((first_frame_points[:, 0] - u_min) / (u_max - u_min), 0, 1)
+        colors[:, 0] = (u_normalized * 255).astype(np.uint8)
+
+        # Normalize and map v coordinate to green channel
+        v_min, v_max = 0, height
+        v_normalized = np.clip((first_frame_points[:, 1] - v_min) / (v_max - v_min), 0, 1)
+        colors[:, 1] = (v_normalized * 255).astype(np.uint8)
+
+        # Handle z coordinate for blue channel
+        z_values = first_frame_points[:, 2]
+        if np.all(z_values == 0):
+            colors[:, 2] = np.random.randint(0, 256, num_points, dtype=np.uint8)
+        else:
+            inv_z = 1 / (z_values + 1e-10)
+            p2 = np.percentile(inv_z, 2)
+            p98 = np.percentile(inv_z, 98)
+            normalized_z = np.clip((inv_z - p2) / (p98 - p2 + 1e-10), 0, 1)
+            colors[:, 2] = (normalized_z * 255).astype(np.uint8)
+
+        return colors
+
+    def apply_cosine_positional_encoding(self, points, height, width, cos_level=4):
+        """Apply cosine positional encoding to tracking points - same as VideoToCosVisualize"""
+        T, N, _ = points.shape
+
+        # Extract x, y, z coordinates
+        x_coords = points[:, :, 0]
+        y_coords = points[:, :, 1]
+        z_coords = points[:, :, 2]
+
+        # Normalize coordinates
+        x_normalized = torch.clamp((x_coords - 0) / width, 0, 1)
+        y_normalized = torch.clamp((y_coords - 0) / height, 0, 1)
+
+        # Handle z coordinates - convert to inverse depth and normalize
+        z_values = z_coords
+        if torch.all(z_values == 0):
+            z_normalized = torch.rand_like(z_values)
+        else:
+            inv_z = 1 / (z_values + 1e-10)
+            inv_z_np = inv_z.detach().cpu().numpy()
+            p2 = np.percentile(inv_z_np, 2)
+            p98 = np.percentile(inv_z_np, 98)
+            p2_tensor = torch.tensor(p2, device=inv_z.device, dtype=inv_z.dtype)
+            p98_tensor = torch.tensor(p98, device=inv_z.device, dtype=inv_z.dtype)
+            z_normalized = torch.clamp((inv_z - p2_tensor) / (p98_tensor - p2_tensor + 1e-10), 0, 1)
+
+        # Create normalized tracking tensor
+        normalized_tracks = torch.zeros_like(points)
+        normalized_tracks[:, :, 0] = x_normalized
+        normalized_tracks[:, :, 1] = y_normalized
+        normalized_tracks[:, :, 2] = z_normalized
+
+        encoded_tracks_list = []
+        for i in range(cos_level):
+            encoding_factor = (2 ** i) * np.pi
+            encoded_tracks = torch.cos(encoding_factor * normalized_tracks)
+            encoded_tracks_list.append(encoded_tracks)
+
+        return encoded_tracks_list
+
+    def generate_colors_from_encoded_points(self, encoded_points, N):
+        """Generate colors based on encoded cosine values"""
+        colors = np.zeros((N, 3), dtype=np.uint8)
+        u_normalized = np.clip((encoded_points[:, 0] + 1) / 2, 0, 1)
+        colors[:, 0] = (u_normalized * 255).astype(np.uint8)
+        v_normalized = np.clip((encoded_points[:, 1] + 1) / 2, 0, 1)
+        colors[:, 1] = (v_normalized * 255).astype(np.uint8)
+        z_normalized = np.clip((encoded_points[:, 2] + 1) / 2, 0, 1)
+        colors[:, 2] = (z_normalized * 255).astype(np.uint8)
+        return colors
+
+    def process(self, input_video, pred_tracks, pred_visibility, point_size, cos_level, generate_type, mask_video=None):
+        # Get video dimensions
+        if isinstance(input_video, torch.Tensor):
+            F, H, W, C = input_video.shape
+        else:
+            video_frames = np.array(input_video)
+            F, H, W, C = video_frames.shape
+
+        # Convert tracking data to numpy
+        points = pred_tracks.detach().cpu().numpy()
+        vis_mask = pred_visibility.detach().cpu().numpy()
+        if vis_mask.ndim == 3 and vis_mask.shape[2] == 1:
+            vis_mask = vis_mask.squeeze(-1)
+
+        T, N, _ = points.shape
+
+        # Load mask video if provided
+        mask_video_processed = self._load_mask_video(mask_video, generate_type, T, H, W)
+
+        # 1. Generate basic tracking video
+        colors_tracking = self.generate_colors_from_points(points[0], N, H, W)
+        tracking_frames = []
+
+        for i in range(T):
+            pts_i = points[i]
+            visibility = vis_mask[i] > 0
+
+            pixels = pts_i[visibility, :2]
+            depths = pts_i[visibility, 2]
+
+            valid_coords = np.isfinite(pixels).all(axis=1)
+            pixels = pixels[valid_coords]
+            depths = depths[valid_coords]
+            pixels = pixels.astype(int)
+
+            in_frame = self.valid_mask(pixels, W, H)
+            pixels = pixels[in_frame]
+            depths = depths[in_frame]
+
+            frame_rgb = colors_tracking[visibility][valid_coords][in_frame]
+
+            img = Image.fromarray(np.zeros((H, W, 3), dtype=np.uint8), mode="RGB")
+
+            sorted_pixels, _, sort_index = self.sort_points_by_depth(pixels, depths)
+            sorted_rgb = frame_rgb[sort_index]
+
+            for j in range(sorted_pixels.shape[0]):
+                coord = (sorted_pixels[j, 0], sorted_pixels[j, 1])
+                if self._should_draw_point(coord, mask_video_processed, i, generate_type, W, H):
+                    self.draw_rectangle(img, coord=coord, side_length=point_size, color=sorted_rgb[j])
+
+            tracking_frames.append(np.array(img))
+
+        tracking_tensor = torch.from_numpy(np.array(tracking_frames)).float() / 255.0
+
+        # 2. Generate depth video
+        colormap = matplotlib.colormaps["Spectral"]
+        depth_frames = []
+
+        for t in range(T):
+            img = Image.fromarray(np.zeros((H, W, 3), dtype=np.uint8), mode="RGB")
+
+            uv_t = points[t, :, :2]
+            depth_t = points[t, :, 2]
+            vis_t = vis_mask[t].astype(bool)
+
+            visible_uv = uv_t[vis_t]
+            visible_depth = depth_t[vis_t]
+
+            if len(visible_uv) == 0:
+                depth_frames.append(np.array(img))
+                continue
+
+            p2, p98 = np.percentile(visible_depth, [2, 98])
+            if p98 > p2:
+                depth_clipped = np.clip(visible_depth, p2, p98)
+                depth_normalized = (depth_clipped - p2) / (p98 - p2)
+            else:
+                depth_normalized = np.zeros_like(visible_depth)
+
+            colors = (colormap(depth_normalized, bytes=False)[:, :3] * 255).astype(np.uint8)
+
+            sort_indices = np.argsort(visible_depth)[::-1]
+            sorted_uv = visible_uv[sort_indices]
+            sorted_colors = colors[sort_indices]
+
+            for uv, color in zip(sorted_uv, sorted_colors):
+                if np.isfinite(uv[0]) and np.isfinite(uv[1]):
+                    coord = (int(uv[0]), int(uv[1]))
+                    if 0 <= coord[0] < W and 0 <= coord[1] < H:
+                        if self._should_draw_point(coord, mask_video_processed, t, generate_type, W, H):
+                            self.draw_rectangle(img, coord=coord, side_length=point_size, color=tuple(color))
+
+            depth_frames.append(np.array(img))
+
+        depth_tensor = torch.from_numpy(np.array(depth_frames)).float() / 255.0
+
+        # 3. Generate cosine encoded videos
+        encoded_tracks_list = self.apply_cosine_positional_encoding(
+            pred_tracks, H, W, cos_level=min(cos_level, 4)
+        )
+
+        cos_videos = []
+        for i in range(4):
+            if i < len(encoded_tracks_list):
+                encoded_points = encoded_tracks_list[i].detach().cpu().numpy()
+                colors_cos = self.generate_colors_from_encoded_points(encoded_points[0], N)
+
+                cos_frames = []
+                for t in range(T):
+                    pts_t = points[t]
+                    visibility = vis_mask[t] > 0
+
+                    pixels = pts_t[visibility, :2]
+                    depths = pts_t[visibility, 2]
+
+                    valid_coords = np.isfinite(pixels).all(axis=1)
+                    pixels = pixels[valid_coords]
+                    depths = depths[valid_coords]
+                    pixels = pixels.astype(int)
+
+                    in_frame = self.valid_mask(pixels, W, H)
+                    pixels = pixels[in_frame]
+                    depths = depths[in_frame]
+
+                    frame_rgb = colors_cos[visibility][valid_coords][in_frame]
+
+                    img = Image.fromarray(np.zeros((H, W, 3), dtype=np.uint8), mode="RGB")
+
+                    sorted_pixels, _, sort_index = self.sort_points_by_depth(pixels, depths)
+                    sorted_rgb = frame_rgb[sort_index]
+
+                    for j in range(sorted_pixels.shape[0]):
+                        coord = (sorted_pixels[j, 0], sorted_pixels[j, 1])
+                        if self._should_draw_point(coord, mask_video_processed, t, generate_type, W, H):
+                            self.draw_rectangle(img, coord=coord, side_length=point_size, color=sorted_rgb[j])
+
+                    cos_frames.append(np.array(img))
+
+                cos_tensor = torch.from_numpy(np.array(cos_frames)).float() / 255.0
+                cos_videos.append(cos_tensor)
+            else:
+                empty_video = torch.zeros((T, H, W, 3), dtype=torch.float32)
+                cos_videos.append(empty_video)
+
+        return (tracking_tensor, depth_tensor, cos_videos[0], cos_videos[1], cos_videos[2], cos_videos[3])

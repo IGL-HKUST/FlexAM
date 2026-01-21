@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 from omegaconf import OmegaConf
 
-from .annotator.nodes import VideoToCanny, VideoToDepth, VideoToPose, VideoToTracking
+from .annotator.nodes import VideoToCanny, VideoToDepth, VideoToPose, VideoToTrackingPredict, VideoToTrackingVisualize, VideoToCosVisualize, VideoTodepthVisualize
 # from .motion_video.nodes import VideoToTracking
 from .camera_utils import CAMERA, combine_camera_motion, get_camera_motion
 
@@ -403,7 +403,10 @@ NODE_CLASS_MAPPINGS = {
     "VideoToCanny": VideoToCanny,
     "VideoToDepth": VideoToDepth,
     "VideoToOpenpose": VideoToPose,
-    "VideoToTracking": VideoToTracking,
+    "VideoToTrackingPredict": VideoToTrackingPredict,
+    "VideoToTrackingVisualize": VideoToTrackingVisualize,
+    "VideoToCosVisualize": VideoToCosVisualize,
+    "VideoTodepthVisualize": VideoTodepthVisualize,
 
     "CreateTrajectoryBasedOnKJNodes": CreateTrajectoryBasedOnKJNodes,
     "CameraBasicFromChaoJie": CameraBasicFromChaoJie,
@@ -422,11 +425,14 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # FlexAM display names
     "LoadWan2_2FunModel_FlexAM": "Load FlexAM Model",
     "Wan2_2FunV2VSampler_FlexAM": "FlexAM Sampler",
-    
+
     "VideoToCanny": "Video To Canny",
     "VideoToDepth": "Video To Depth",
     "VideoToOpenpose": "Video To Pose",
-    "VideoToTracking": "Video To 3d Tracking",
+    "VideoToTrackingPredict": "Video To 3D Tracking Predict",
+    "VideoToTrackingVisualize": "Video To 3D Tracking Visualize",
+    "VideoToCosVisualize": "Video To Cosine Encoding Visualize",
+    "VideoTodepthVisualize": "Video To Depth Visualize",
 
     "CreateTrajectoryBasedOnKJNodes": "Create Trajectory Based On KJNodes",
     "CameraBasicFromChaoJie": "Camera Basic From ChaoJie",

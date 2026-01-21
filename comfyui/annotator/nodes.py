@@ -293,51 +293,20 @@ class VideoToPose:
         return (output_video,)
 
 
-class VideoToTracking:
+class VideoToTrackingPredict:
     @classmethod
     def INPUT_TYPES(s):
         return {
             "required": {
                 "input_video": ("IMAGE",),
                 "density": ("INT", {"default": 10, "min": 1, "max": 100, "step": 1}), # 轨迹点密度
-                "point_size": ("INT", {"default": 4, "min": 1, "max": 20, "step": 1}), # 可视化点的大小
             }
         }
 
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("tracking_video",)
+    RETURN_TYPES = ("TRACKING_DATA", "TRACKING_DATA")
+    RETURN_NAMES = ("pred_tracks", "pred_visibility")
     FUNCTION = "process"
     CATEGORY = "CogVideoXFUNWrapper"
-
-    def valid_mask(self, pixels, W, H):
-        """Check if pixels are within valid image bounds"""
-        return ((pixels[:, 0] >= 0) & (pixels[:, 0] < W) & (pixels[:, 1] > 0) & \
-                 (pixels[:, 1] < H))
-
-    def sort_points_by_depth(self, points, depths):
-        """Sort points by depth values for Z-buffering"""
-        # Combine points and depths into a single array for sorting
-        combined = np.hstack((points, depths[:, None]))  # Nx3 (points + depth)
-        # Sort by depth (last column) in descending order
-        sort_index = combined[:, -1].argsort()[::-1]
-        sorted_combined = combined[sort_index]
-        # Split back into points and depths
-        sorted_points = sorted_combined[:, :-1]
-        sorted_depths = sorted_combined[:, -1]
-        return sorted_points, sorted_depths, sort_index
-
-    def draw_rectangle(self, rgb, coord, side_length, color=(255, 0, 0)):
-        """Draw a rectangle on the PIL image"""
-        draw = ImageDraw.Draw(rgb)
-        left_up_point = (coord[0] - side_length//2, coord[1] - side_length//2)  
-        right_down_point = (coord[0] + side_length//2, coord[1] + side_length//2)
-        color = tuple(list(color))
-
-        draw.rectangle(
-            [left_up_point, right_down_point],
-            fill=tuple(color),
-            outline=tuple(color),
-        )
 
     def predict_unidepth(self, video_torch, model):
         """Run UniDepth inference"""
@@ -350,30 +319,27 @@ class VideoToTracking:
         depth_pred = np.concatenate(depth_pred, axis=0)
         return depth_pred
 
-    def process(self, input_video, density, point_size):
+    def process(self, input_video, density):
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        
+
         # 1. 模型路径处理
-        # 尝试在 ComfyUI 的 models 目录下寻找模型
         possible_folders = ["Fun_Models/Third_Party", "checkpoints", "DELTA"]
         densetrack_path = "densetrack3d.pth"
-        
+
         found_path = None
         for folder in possible_folders:
             candidate = os.path.join(folder_paths.models_dir, folder, densetrack_path)
             if os.path.exists(candidate):
                 found_path = candidate
                 break
-        
-        # 如果找不到，回退到当前插件目录下的 checkpoints (参考 pipelines.py 的逻辑)
+
         if found_path is None:
             local_checkpoint = os.path.join(project_root, 'checkpoints', 'densetrack3d.pth')
             if os.path.exists(local_checkpoint):
                 found_path = local_checkpoint
             else:
-                # 这里可以添加 download_url_to_file 逻辑，如果有 URL 的话
                 print(f"Warning: 'densetrack3d.pth' not found in models dir. Trying default relative path.")
-                found_path = local_checkpoint # 尝试硬闯，或者报错
+                found_path = local_checkpoint
 
         print(f"Loading DenseTrack3D from: {found_path}")
 
@@ -386,7 +352,7 @@ class VideoToTracking:
             model_resolution=(384, 512),
             upsample_factor=4
         )
-        
+
         if os.path.exists(found_path):
             with open(found_path, "rb") as f:
                 state_dict = torch.load(f, map_location="cpu")
@@ -398,23 +364,14 @@ class VideoToTracking:
 
         predictor = DensePredictor3D(model=model).to(device).eval()
 
-
         unidepth_model = UniDepthV2.from_pretrained("lpiccinelli/unidepth-v2-vitl14")
         unidepth_model = unidepth_model.eval().to(device)
 
         # 4. 数据预处理
-        # ComfyUI input: [Frames, Height, Width, Channel] (F, H, W, 3) 范围 0-1
-        # UniDepth need: [Frames, Channel, Height, Width] (F, 3, H, W)
-        # DELTA need:    [Batch, Channel, Frames, Height, Width] (B, 3, F, H, W)
-        
         if isinstance(input_video, torch.Tensor):
-            # input_video is [F, H, W, C]
-            # Convert to [F, C, H, W] for UniDepth
             video_for_unidepth = input_video.permute(0, 3, 1, 2).to(device)
-            # DELTA expects [B, C, F, H, W] -> We add Batch dim
-            video_tensor_delta = video_for_unidepth.unsqueeze(0) 
+            video_tensor_delta = video_for_unidepth.unsqueeze(0)
         else:
-            # Fallback for list of frames if necessary, but Comfy usually gives Tensor
             video_frames = np.array(input_video * 255, np.uint8)
             video_for_unidepth = torch.from_numpy(video_frames).permute(0, 3, 1, 2).float() / 255.0
             video_for_unidepth = video_for_unidepth.to(device)
@@ -424,29 +381,13 @@ class VideoToTracking:
 
         # 5. 生成深度图 (UniDepth)
         print("Running UniDepth...")
-        # UniDepth expects input in range [0, 1] (or check model spec, usually generic float)
-        # Pipelines.py multiplied by 255 before unidepth? 
-        # Code check: `video_for_unidepth = video_for_unidepth * 255` in pipelines.py.
-        # Let's verify input range. ComfyUI gives 0-1. 
         video_input_unidepth_scaled = video_for_unidepth * 255.0
         videodepth = self.predict_unidepth(video_input_unidepth_scaled, unidepth_model)
-        
-        # Format depth for DELTA: [B, 1, F, H, W] ?
-        # Pipelines code: `videodepth = torch.from_numpy(videodepth).unsqueeze(1).cuda()[None].float()`
-        # videodepth from predict is [F, H, W]. 
-        # unsqueeze(1) -> [F, 1, H, W]. 
-        # [None] -> [1, F, 1, H, W].
-        # DELTA predictor expects `videodepth` as [B, F, 1, H, W] ?? 
-        # Let's check pipelines.py logic:
-        # video_tensor passed to predictor is [B, F, C, H, W] (after permute).
-        # videodepth passed is [1, F, 1, H, W].
-        
-        videodepth_tensor = torch.from_numpy(videodepth).unsqueeze(1).to(device).float().unsqueeze(0) # [1, F, 1, H, W]
-        
+
+        videodepth_tensor = torch.from_numpy(videodepth).unsqueeze(1).to(device).float().unsqueeze(0)
+
         # 6. 生成轨迹 (DenseTrack3D Inference)
         print("Running DenseTrack3D...")
-        # Prepare video tensor for DELTA: [B, F, C, H, W]
-        # video_tensor_delta = video_tensor_delta.permute(0, 2, 1, 3, 4) # [B, F, C, H, W] 
         print(video_tensor_delta.shape)
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=False):
             out_dict = predictor(
@@ -454,16 +395,16 @@ class VideoToTracking:
                 videodepth_tensor,
                 grid_query_frame=0,
             )
-        
+
         # Parse output
-        trajs_uv = out_dict["trajs_uv"] # B T N 2
-        trajs_vis = out_dict["vis"] # B T N 1
-        dense_reso = out_dict["dense_reso"] # (h, w)
-        trajs_depth = out_dict["trajs_depth"] # B T N 1
+        trajs_uv = out_dict["trajs_uv"]
+        trajs_vis = out_dict["vis"]
+        dense_reso = out_dict["dense_reso"]
+        trajs_depth = out_dict["trajs_depth"]
 
         # Downsample / Density control
         downsample = density
-        
+
         sparse_trajs_uv = rearrange(trajs_uv, "b t (h w) c -> b t h w c", h=dense_reso[0], w=dense_reso[1])
         sparse_trajs_uv = sparse_trajs_uv[:, :, :: downsample, :: downsample]
         sparse_trajs_uv = rearrange(sparse_trajs_uv, "b t h w c -> b t (h w) c")
@@ -481,30 +422,89 @@ class VideoToTracking:
         pred_tracks = torch.zeros((B, T, N, 3), device=device)
         pred_tracks[:, :, :, :2] = sparse_trajs_uv
         pred_tracks[:, :, :, 2] = sparse_trajs_depth[:, :, :, 0]
-        
-        pred_tracks = pred_tracks.squeeze(0) # [T, N, 3]
-        pred_visibility = sparse_trajs_vis.squeeze(0) # [T, N]
 
-        # 7. 可视化 (Visualization)
-        print("Visualizing Tracking Video...")
-        
+        pred_tracks = pred_tracks.squeeze(0)  # [T, N, 3]
+        pred_visibility = sparse_trajs_vis.squeeze(0)  # [T, N]
+
+        # Cleanup memory
+        del model, predictor, unidepth_model
+        torch.cuda.empty_cache()
+
+        return (pred_tracks, pred_visibility)
+
+
+class VideoToTrackingVisualize:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "input_video": ("IMAGE",),
+                "pred_tracks": ("TRACKING_DATA",),
+                "pred_visibility": ("TRACKING_DATA",),
+                "point_size": ("INT", {"default": 4, "min": 1, "max": 20, "step": 1}),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("tracking_video",)
+    FUNCTION = "process"
+    CATEGORY = "CogVideoXFUNWrapper"
+
+    def valid_mask(self, pixels, W, H):
+        """Check if pixels are within valid image bounds"""
+        return ((pixels[:, 0] >= 0) & (pixels[:, 0] < W) & (pixels[:, 1] > 0) & \
+                 (pixels[:, 1] < H))
+
+    def sort_points_by_depth(self, points, depths):
+        """Sort points by depth values for Z-buffering"""
+        combined = np.hstack((points, depths[:, None]))
+        sort_index = combined[:, -1].argsort()[::-1]
+        sorted_combined = combined[sort_index]
+        sorted_points = sorted_combined[:, :-1]
+        sorted_depths = sorted_combined[:, -1]
+        return sorted_points, sorted_depths, sort_index
+
+    def draw_rectangle(self, rgb, coord, side_length, color=(255, 0, 0)):
+        """Draw a rectangle on the PIL image"""
+        draw = ImageDraw.Draw(rgb)
+        left_up_point = (coord[0] - side_length//2, coord[1] - side_length//2)
+        right_down_point = (coord[0] + side_length//2, coord[1] + side_length//2)
+        color = tuple(list(color))
+
+        draw.rectangle(
+            [left_up_point, right_down_point],
+            fill=tuple(color),
+            outline=tuple(color),
+        )
+
+    def process(self, input_video, pred_tracks, pred_visibility, point_size):
+        # Get video dimensions
+        if isinstance(input_video, torch.Tensor):
+            F, H, W, C = input_video.shape
+        else:
+            video_frames = np.array(input_video)
+            F, H, W, C = video_frames.shape
+
+        # Convert tracking data to numpy
         points = pred_tracks.detach().cpu().numpy()
         vis_mask = pred_visibility.detach().cpu().numpy()
         if vis_mask.ndim == 3 and vis_mask.shape[2] == 1:
             vis_mask = vis_mask.squeeze(-1)
 
+        T, N, _ = points.shape
+
         # Generate colors based on first frame position
         colors = np.zeros((N, 3), dtype=np.uint8)
         first_frame_pts = points[0]
-        
+
         u_min, u_max = 0, W
         u_normalized = np.clip((first_frame_pts[:, 0] - u_min) / (u_max - u_min), 0, 1)
         colors[:, 0] = (u_normalized * 255).astype(np.uint8)
-        
+
         v_min, v_max = 0, H
         v_normalized = np.clip((first_frame_pts[:, 1] - v_min) / (v_max - v_min), 0, 1)
         colors[:, 1] = (v_normalized * 255).astype(np.uint8)
-        
+
         # Z-Coloring
         z_values = first_frame_pts[:, 2]
         if np.all(z_values == 0):
@@ -520,42 +520,341 @@ class VideoToTracking:
         for i in range(T):
             pts_i = points[i]
             visibility = vis_mask[i] > 0
-            
+
             # Filter valid points
             pixels = pts_i[visibility, :2]
             depths = pts_i[visibility, 2]
-            
+
             valid_coords = np.isfinite(pixels).all(axis=1)
             pixels = pixels[valid_coords]
             depths = depths[valid_coords]
             pixels = pixels.astype(int)
-            
+
             in_frame = self.valid_mask(pixels, W, H)
             pixels = pixels[in_frame]
             depths = depths[in_frame]
-            
+
             # Filter colors
             frame_rgb = colors[visibility][valid_coords][in_frame]
-            
+
             # Create blank image
             img = Image.fromarray(np.zeros((H, W, 3), dtype=np.uint8), mode="RGB")
-            
+
             # Sort by depth for correct occlusion
             sorted_pixels, _, sort_index = self.sort_points_by_depth(pixels, depths)
             sorted_rgb = frame_rgb[sort_index]
-            
+
             # Draw
             for j in range(sorted_pixels.shape[0]):
                 coord = (sorted_pixels[j, 0], sorted_pixels[j, 1])
                 self.draw_rectangle(img, coord=coord, side_length=point_size, color=sorted_rgb[j])
-            
-            output_frames.append(np.array(img))
 
-        # Cleanup memory
-        del model, predictor, unidepth_model
-        torch.cuda.empty_cache()
+            output_frames.append(np.array(img))
 
         # Convert back to ComfyUI Tensor format: [F, H, W, C], float 0-1
         output_tensor = torch.from_numpy(np.array(output_frames)).float() / 255.0
-        
+
+        return (output_tensor,)
+
+
+class VideoToCosVisualize:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "input_video": ("IMAGE",),
+                "pred_tracks": ("TRACKING_DATA",),
+                "pred_visibility": ("TRACKING_DATA",),
+                "point_size": ("INT", {"default": 4, "min": 1, "max": 20, "step": 1}),
+                "cos_level": ("INT", {"default": 4, "min": 1, "max": 8, "step": 1}),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE", "IMAGE")
+    RETURN_NAMES = ("cos_level_0", "cos_level_1", "cos_level_2", "cos_level_3")
+    FUNCTION = "process"
+    CATEGORY = "CogVideoXFUNWrapper"
+
+    def valid_mask(self, pixels, W, H):
+        """Check if pixels are within valid image bounds"""
+        return ((pixels[:, 0] >= 0) & (pixels[:, 0] < W) & (pixels[:, 1] > 0) & \
+                 (pixels[:, 1] < H))
+
+    def sort_points_by_depth(self, points, depths):
+        """Sort points by depth values for Z-buffering"""
+        combined = np.hstack((points, depths[:, None]))
+        sort_index = combined[:, -1].argsort()[::-1]
+        sorted_combined = combined[sort_index]
+        sorted_points = sorted_combined[:, :-1]
+        sorted_depths = sorted_combined[:, -1]
+        return sorted_points, sorted_depths, sort_index
+
+    def draw_rectangle(self, rgb, coord, side_length, color=(255, 0, 0)):
+        """Draw a rectangle on the PIL image"""
+        draw = ImageDraw.Draw(rgb)
+        left_up_point = (coord[0] - side_length//2, coord[1] - side_length//2)
+        right_down_point = (coord[0] + side_length//2, coord[1] + side_length//2)
+        color = tuple(list(color))
+
+        draw.rectangle(
+            [left_up_point, right_down_point],
+            fill=tuple(color),
+            outline=tuple(color),
+        )
+
+    def apply_cosine_positional_encoding(self, points, height, width, cos_level=4):
+        """Apply cosine positional encoding to tracking points
+
+        Args:
+            points: torch.Tensor [T, N, 3] - tracking points
+            height, width: int - video dimensions
+            cos_level: int - number of encoding levels
+
+        Returns:
+            list of encoded_tracks for each level
+        """
+        T, N, _ = points.shape
+
+        # Extract x, y, z coordinates
+        x_coords = points[:, :, 0]  # [T, N]
+        y_coords = points[:, :, 1]  # [T, N]
+        z_coords = points[:, :, 2]  # [T, N]
+
+        # Normalize x coordinates to [0, 1] based on video width
+        u_min, u_max = 0, width
+        x_normalized = torch.clamp((x_coords - u_min) / (u_max - u_min), 0, 1)
+
+        # Normalize y coordinates to [0, 1] based on video height
+        v_min, v_max = 0, height
+        y_normalized = torch.clamp((y_coords - v_min) / (v_max - v_min), 0, 1)
+
+        # Handle z coordinates - convert to inverse depth and normalize
+        z_values = z_coords
+        if torch.all(z_values == 0):
+            # If all z values are 0, use random normalization
+            z_normalized = torch.rand_like(z_values)
+        else:
+            # Convert to inverse depth
+            inv_z = 1 / (z_values + 1e-10)
+
+            # Use percentile-based normalization
+            inv_z_np = inv_z.detach().cpu().numpy()
+            p2 = np.percentile(inv_z_np, 2)
+            p98 = np.percentile(inv_z_np, 98)
+
+            # Convert back to tensor and normalize
+            p2_tensor = torch.tensor(p2, device=inv_z.device, dtype=inv_z.dtype)
+            p98_tensor = torch.tensor(p98, device=inv_z.device, dtype=inv_z.dtype)
+            z_normalized = torch.clamp((inv_z - p2_tensor) / (p98_tensor - p2_tensor + 1e-10), 0, 1)
+
+        # Create normalized tracking tensor
+        normalized_tracks = torch.zeros_like(points)
+        normalized_tracks[:, :, 0] = x_normalized
+        normalized_tracks[:, :, 1] = y_normalized
+        normalized_tracks[:, :, 2] = z_normalized
+
+        encoded_tracks_list = []
+
+        for i in range(cos_level):
+            # Calculate encoding factor: 2^i * pi
+            encoding_factor = (2 ** i) * np.pi
+
+            # Apply cosine encoding to normalized coordinates
+            encoded_tracks = torch.cos(encoding_factor * normalized_tracks)
+
+            encoded_tracks_list.append(encoded_tracks)
+
+        return encoded_tracks_list
+
+    def generate_colors_from_encoded_points(self, encoded_points, N):
+        """Generate colors based on encoded cosine values"""
+        colors = np.zeros((N, 3), dtype=np.uint8)
+
+        # Map cosine values [-1, 1] to [0, 255]
+        # Use np.clip to ensure values stay in valid range
+        u_normalized = np.clip((encoded_points[:, 0] + 1) / 2, 0, 1)
+        colors[:, 0] = (u_normalized * 255).astype(np.uint8)
+
+        v_normalized = np.clip((encoded_points[:, 1] + 1) / 2, 0, 1)
+        colors[:, 1] = (v_normalized * 255).astype(np.uint8)
+
+        # Normalize and map z coordinate to blue channel
+        z_normalized = np.clip((encoded_points[:, 2] + 1) / 2, 0, 1)
+        colors[:, 2] = (z_normalized * 255).astype(np.uint8)
+
+        return colors
+
+    def process(self, input_video, pred_tracks, pred_visibility, point_size, cos_level):
+        # Get video dimensions
+        if isinstance(input_video, torch.Tensor):
+            F, H, W, C = input_video.shape
+        else:
+            video_frames = np.array(input_video)
+            F, H, W, C = video_frames.shape
+
+        # Convert tracking data to numpy
+        points = pred_tracks.detach().cpu().numpy()
+        vis_mask = pred_visibility.detach().cpu().numpy()
+        if vis_mask.ndim == 3 and vis_mask.shape[2] == 1:
+            vis_mask = vis_mask.squeeze(-1)
+
+        T, N, _ = points.shape
+
+        # Apply cosine positional encoding
+        encoded_tracks_list = self.apply_cosine_positional_encoding(
+            pred_tracks, H, W, cos_level=min(cos_level, 4)
+        )
+
+        # Generate cos videos for each level
+        cos_videos = []
+        for i in range(4):  # Always return 4 outputs
+            if i < len(encoded_tracks_list):
+                encoded_points = encoded_tracks_list[i].detach().cpu().numpy()
+
+                # Generate colors based on encoded values
+                colors = self.generate_colors_from_encoded_points(encoded_points[0], N)
+
+                output_frames = []
+                for t in range(T):
+                    pts_t = points[t]  # Use original points for position
+                    visibility = vis_mask[t] > 0
+
+                    # Filter valid points
+                    pixels = pts_t[visibility, :2]
+                    depths = pts_t[visibility, 2]
+
+                    valid_coords = np.isfinite(pixels).all(axis=1)
+                    pixels = pixels[valid_coords]
+                    depths = depths[valid_coords]
+                    pixels = pixels.astype(int)
+
+                    in_frame = self.valid_mask(pixels, W, H)
+                    pixels = pixels[in_frame]
+                    depths = depths[in_frame]
+
+                    # Filter colors
+                    frame_rgb = colors[visibility][valid_coords][in_frame]
+
+                    # Create blank image
+                    img = Image.fromarray(np.zeros((H, W, 3), dtype=np.uint8), mode="RGB")
+
+                    # Sort by depth for correct occlusion
+                    sorted_pixels, _, sort_index = self.sort_points_by_depth(pixels, depths)
+                    sorted_rgb = frame_rgb[sort_index]
+
+                    # Draw
+                    for j in range(sorted_pixels.shape[0]):
+                        coord = (sorted_pixels[j, 0], sorted_pixels[j, 1])
+                        self.draw_rectangle(img, coord=coord, side_length=point_size, color=sorted_rgb[j])
+
+                    output_frames.append(np.array(img))
+
+                # Convert to tensor
+                output_tensor = torch.from_numpy(np.array(output_frames)).float() / 255.0
+                cos_videos.append(output_tensor)
+            else:
+                # Return empty video for unused levels
+                empty_video = torch.zeros((T, H, W, 3), dtype=torch.float32)
+                cos_videos.append(empty_video)
+
+        return tuple(cos_videos)
+
+
+class VideoTodepthVisualize:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "input_video": ("IMAGE",),
+                "pred_tracks": ("TRACKING_DATA",),
+                "pred_visibility": ("TRACKING_DATA",),
+                "point_size": ("INT", {"default": 4, "min": 1, "max": 20, "step": 1}),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("depth_video",)
+    FUNCTION = "process"
+    CATEGORY = "CogVideoXFUNWrapper"
+
+    def valid_mask(self, pixels, W, H):
+        """Check if pixels are within valid image bounds"""
+        return ((pixels[:, 0] >= 0) & (pixels[:, 0] < W) & (pixels[:, 1] > 0) & \
+                 (pixels[:, 1] < H))
+
+    def draw_rectangle(self, rgb, coord, side_length, color=(255, 0, 0)):
+        """Draw a rectangle on the PIL image"""
+        draw = ImageDraw.Draw(rgb)
+        left_up_point = (coord[0] - side_length//2, coord[1] - side_length//2)
+        right_down_point = (coord[0] + side_length//2, coord[1] + side_length//2)
+        color = tuple(list(color))
+
+        draw.rectangle(
+            [left_up_point, right_down_point],
+            fill=tuple(color),
+            outline=tuple(color),
+        )
+
+    def process(self, input_video, pred_tracks, pred_visibility, point_size):
+        # Get video dimensions
+        if isinstance(input_video, torch.Tensor):
+            F, H, W, C = input_video.shape
+        else:
+            video_frames = np.array(input_video)
+            F, H, W, C = video_frames.shape
+
+        # Convert tracking data to numpy
+        points = pred_tracks.detach().cpu().numpy()
+        vis_mask = pred_visibility.detach().cpu().numpy()
+        if vis_mask.ndim == 3 and vis_mask.shape[2] == 1:
+            vis_mask = vis_mask.squeeze(-1)
+
+        T, N, _ = points.shape
+
+        # Use Spectral colormap for depth visualization
+        colormap = matplotlib.colormaps["Spectral"]
+
+        output_frames = []
+        for t in range(T):
+            img = Image.fromarray(np.zeros((H, W, 3), dtype=np.uint8), mode="RGB")
+
+            uv_t = points[t, :, :2]
+            depth_t = points[t, :, 2]
+            vis_t = vis_mask[t].astype(bool)
+
+            visible_uv = uv_t[vis_t]
+            visible_depth = depth_t[vis_t]
+
+            if len(visible_uv) == 0:
+                output_frames.append(np.array(img))
+                continue
+
+            # Normalize depth using percentiles
+            p2, p98 = np.percentile(visible_depth, [2, 98])
+            if p98 > p2:
+                depth_clipped = np.clip(visible_depth, p2, p98)
+                depth_normalized = (depth_clipped - p2) / (p98 - p2)
+            else:
+                depth_normalized = np.zeros_like(visible_depth)
+
+            # Convert to colors using Spectral colormap
+            colors = (colormap(depth_normalized, bytes=False)[:, :3] * 255).astype(np.uint8)
+
+            # Sort by depth (far to near for proper occlusion)
+            sort_indices = np.argsort(visible_depth)[::-1]
+            sorted_uv = visible_uv[sort_indices]
+            sorted_colors = colors[sort_indices]
+
+            # Draw points
+            for uv, color in zip(sorted_uv, sorted_colors):
+                if np.isfinite(uv[0]) and np.isfinite(uv[1]):
+                    coord = (int(uv[0]), int(uv[1]))
+                    if 0 <= coord[0] < W and 0 <= coord[1] < H:
+                        self.draw_rectangle(img, coord=coord, side_length=point_size, color=tuple(color))
+
+            output_frames.append(np.array(img))
+
+        # Convert to ComfyUI tensor format: [F, H, W, C], float 0-1
+        output_tensor = torch.from_numpy(np.array(output_frames)).float() / 255.0
+
         return (output_tensor,)

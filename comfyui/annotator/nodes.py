@@ -1078,7 +1078,7 @@ class VideoToTrackingVisualizeAll:
 
             tracking_frames.append(np.array(img))
 
-        tracking_tensor = torch.from_numpy(np.array(tracking_frames)).float() / 255.0
+        tracking_tensor = torch.from_numpy(np.array(tracking_frames)).float() 
 
         # 2. Generate depth video
         colormap = matplotlib.colormaps["Spectral"]
@@ -1120,7 +1120,7 @@ class VideoToTrackingVisualizeAll:
 
             depth_frames.append(np.array(img))
 
-        depth_tensor = torch.from_numpy(np.array(depth_frames)).float() / 255.0
+        depth_tensor = torch.from_numpy(np.array(depth_frames)).float()
 
         # 3. Generate cosine encoded videos
         encoded_tracks_list = self.apply_cosine_positional_encoding(
@@ -1164,7 +1164,7 @@ class VideoToTrackingVisualizeAll:
 
                     cos_frames.append(np.array(img))
 
-                cos_tensor = torch.from_numpy(np.array(cos_frames)).float() / 255.0
+                cos_tensor = torch.from_numpy(np.array(cos_frames)).float()
                 cos_videos.append(cos_tensor)
             else:
                 empty_video = torch.zeros((T, H, W, 3), dtype=torch.float32)

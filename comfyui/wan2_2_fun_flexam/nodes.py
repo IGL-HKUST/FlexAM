@@ -443,10 +443,7 @@ class Wan2_2FunV2VSampler_FlexAM:
                 "end_image": ("IMAGE",),
                 "ref_image": ("IMAGE",),
                 "camera_conditions": ("STRING", {"forceInput": True}),
-                "riflex_k": ("RIFLEXT_ARGS",),
-                "density": (
-                    "INT", {"default": 10, "min": 1}
-                ),                
+                "riflex_k": ("RIFLEXT_ARGS",),     
             },
         }
     
@@ -455,7 +452,7 @@ class Wan2_2FunV2VSampler_FlexAM:
     FUNCTION = "process"
     CATEGORY = "CogVideoXFUNWrapper"
 
-    def process(self, funmodels, prompt, negative_prompt, video_length, base_resolution, seed, steps, cfg, denoise_strength, scheduler, shift, boundary, teacache_threshold, enable_teacache, num_skip_start_steps, teacache_offload, cfg_skip_ratio, generate_type, dilation_pixels, original_video=None, control_video=None, depth_video=None, cos_video0=None, cos_video1=None, cos_video2=None, cos_video3=None, mask_video=None, start_image=None, end_image=None, ref_image=None, camera_conditions=None, riflex_k=0, density=10):
+    def process(self, funmodels, prompt, negative_prompt, video_length, base_resolution, seed, steps, cfg, denoise_strength, scheduler, shift, boundary, teacache_threshold, enable_teacache, num_skip_start_steps, teacache_offload, cfg_skip_ratio, generate_type, dilation_pixels, original_video=None, control_video=None, depth_video=None, cos_video0=None, cos_video1=None, cos_video2=None, cos_video3=None, mask_video=None, start_image=None, end_image=None, ref_image=None, camera_conditions=None, riflex_k=0):
         global transformer_cpu_cache
         global transformer_high_cpu_cache
         global lora_path_before
@@ -673,7 +670,7 @@ class Wan2_2FunV2VSampler_FlexAM:
                     depth_video = depth_video,
                     cos_control_videos = cos_video_dict,
                     cos_level= 4,
-                    density = 1.0 / max(density, 1),
+                    density = 1.0 / 15,
                     ref_image = ref_image,
                     boundary = boundary,
                     comfyui_progressbar = True,

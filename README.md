@@ -72,8 +72,7 @@ Or you can run these tasks one by one as follows.
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
-    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-Control)
-    --transformer_path <transformer_path> \ # transformer path (e.g checkpoints/transformer_flexam.safetensors)
+    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
     --output_dir <output_dir> \ # output directory
     --input_path <input_path> \ # the reference video path
     --repaint <True/repaint_path > \ # the repaint first frame image path of input source video or use FLUX to repaint the first frame \
@@ -90,8 +89,7 @@ python demo.py \
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
-    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-Control)
-    --transformer_path <transformer_path> \ # transformer path (e.g checkpoints/transformer_flexam.safetensors)
+    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
     --output_dir <output_dir> \ # output directory
     --input_path <input_path> \ # the reference video path
     --repaint <True/repaint_path > \ # the repaint first frame image path of input source video or use FLUX to repaint the first frame \
@@ -109,8 +107,7 @@ python demo.py \
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
-    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-Control)
-    --transformer_path <transformer_path> \ # transformer path (e.g checkpoints/transformer_flexam.safetensors)
+    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
     --output_dir <output_dir> \ # output directory
     --input_path <input_path> \ # the reference video path
     --repaint <True/repaint_path > \ # the repaint first frame image path of input source video or use FLUX to repaint the first frame \
@@ -133,8 +130,7 @@ We provide several template camera motion types, you can choose one of them. In 
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
-    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-Control)
-    --transformer_path <transformer_path> \ # transformer path (e.g checkpoints/transformer_flexam.safetensors)
+    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
     --output_dir <output_dir> \ # output directory
     --input_path <input_path> \ # the reference image or video path
     --camera_motion <camera_motion> \ # the camera motion type, see examples below
@@ -181,8 +177,7 @@ Notes:
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
-    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-Control)
-    --transformer_path <transformer_path> \ # transformer path (e.g checkpoints/transformer_flexam.safetensors)
+    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
     --output_dir <output_dir> \ # output directory
     --input_path <input_path> \ # the reference image or video path
     --camera_motion "path" \ # if camera motion type is "path", --pose_file is needed
@@ -200,8 +195,7 @@ python demo.py \
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
-    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-Control)
-    --transformer_path <transformer_path> \ # transformer path (e.g checkpoints/transformer_flexam.safetensors)
+    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
     --output_dir <output_dir> \ # output directory
     --input_path <input_path> \ # the reference image or video path
     --camera_motion "path" \ # if camera motion type is "path", --pose_file is needed
@@ -221,8 +215,7 @@ We provide several template object manipulation types, you can choose one of the
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
-    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-Control)
-    --transformer_path <transformer_path> \ # transformer path (e.g checkpoints/transformer_flexam.safetensors)    --output_dir <output_dir> \ # output directory
+    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
     --input_path <input_path> \ # the reference image path
     --object_motion <object_motion> \ # the object motion type (up, down, left, right)
     --object_mask <object_mask_path> \ # the object mask path

@@ -1090,7 +1090,6 @@ class FlexAMPipeline:
         height: int = 480, 
         width: int = 720,
         seed: int = 42,
-        transformer_path: str = None,
         density: int = 10,
     ):
         """
@@ -1124,50 +1123,6 @@ class FlexAMPipeline:
             # low_cpu_mem_usage=True,
             torch_dtype=dtype,
         )
-
-        if transformer_path is not None:
-            print(f"From checkpoint: {transformer_path}")
-            if transformer_path.endswith("safetensors"):
-                from safetensors.torch import load_file, safe_open
-                state_dict = load_file(transformer_path)
-            elif os.path.isdir(transformer_path):
-                # Handle directory with split safetensors files
-                import json
-                from safetensors.torch import load_file
-                
-                index_file = os.path.join(transformer_path, "diffusion_pytorch_model.safetensors.index.json")
-                if os.path.exists(index_file):
-                    # Load the index file to find all safetensors files
-                    with open(index_file, 'r') as f:
-                        index_data = json.load(f)
-                    
-                    state_dict = {}
-                    weight_map = index_data['weight_map']
-                    
-                    # Get unique safetensors files
-                    safetensors_files = set(weight_map.values())
-                    
-                    # Load each safetensors file and merge
-                    for safetensors_file in safetensors_files:
-                        file_path = os.path.join(transformer_path, safetensors_file)
-                        print(f"Loading {file_path}")
-                        file_state_dict = load_file(file_path)
-                        state_dict.update(file_state_dict)
-                else:
-                    # Fallback: try to load all safetensors files in the directory
-                    safetensors_files = [f for f in os.listdir(transformer_path) if f.endswith('.safetensors')]
-                    state_dict = {}
-                    for file_name in sorted(safetensors_files):
-                        file_path = os.path.join(transformer_path, file_name)
-                        print(f"Loading {file_path}")
-                        file_state_dict = load_file(file_path)
-                        state_dict.update(file_state_dict)
-            else:
-                state_dict = torch.load(transformer_path, map_location="cpu")
-            state_dict = state_dict["state_dict"] if "state_dict" in state_dict else state_dict
-
-            m, u = transformer.load_state_dict(state_dict, strict=False)
-            print(f"missing keys: {len(m)}, unexpected keys: {len(u)}")
 
         # Get Vae
         vae = AutoencoderKLWan3_8.from_pretrained(
@@ -1947,7 +1902,7 @@ class FlexAMPipeline:
         
         return tracking_video, cos_video_dict, depth_video
 
-    def apply_tracking(self,  fps=16, tracking_tensor=None, cos_video_dict = None,   depth_video = None, cos_level = 4,  full_ref = None, inpaint_video = None, inpaint_video_mask = None, prompt=None, checkpoint_path=None, transformer_path=None,num_inference_steps=40,  height = 480, width = 720,  video_length = 81, density=10, seed=42):
+    def apply_tracking(self,  fps=16, tracking_tensor=None, cos_video_dict = None,   depth_video = None, cos_level = 4,  full_ref = None, inpaint_video = None, inpaint_video_mask = None, prompt=None, checkpoint_path=None,num_inference_steps=40,  height = 480, width = 720,  video_length = 81, density=10, seed=42):
         """Generate final video with motion transfer
         
         Args:
@@ -1980,7 +1935,6 @@ class FlexAMPipeline:
             fps=self.fps,
             height = height, width = width,
             video_length = video_length,
-            transformer_path = transformer_path,
             density = density,
             seed = seed
         )

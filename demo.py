@@ -149,8 +149,7 @@ if __name__ == "__main__":
     parser.add_argument('--prompt', type=str, required=True, help='Repaint prompt')
     parser.add_argument('--output_dir', type=str, default='outputs', help='Output directory')
     parser.add_argument('--gpu', type=int, default=0, help='GPU device ID')
-    parser.add_argument('--checkpoint_path', type=str, default="checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-Control", help='Path to model checkpoint')
-    parser.add_argument('--transformer_path', type=str, default="checkpoints/transformer_flexam.safetensors", help='Path to transformer checkpoint') 
+    parser.add_argument('--checkpoint_path', type=str, default="checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM", help='Path to model checkpoint')
     parser.add_argument('--num_inference_steps', type=int, default=40, help='Number of inference steps')
     parser.add_argument('--repaint', type=str, default=None, 
                        help='Path to repainted image, or "true" to perform repainting, if not provided use original frame')
@@ -182,7 +181,7 @@ if __name__ == "__main__":
     
     is_video = _is_video_file(args.input_path)
     if is_video:
-        input_video_tensor, _, _, _ = get_video_to_video_latent(args.input_path, video_length=args.video_length, sample_size=args.sample_size, fps=fps, ref_image=None)
+        input_video_tensor, _, _, _ = get_video_to_video_latent(args.input_path, video_length=args.video_length, sample_size=args.sample_size, fps=None, ref_image=None)
     else:
         input_video_tensor = get_image_latent(args.input_path, sample_size=args.sample_size)
 
@@ -394,9 +393,8 @@ if __name__ == "__main__":
             first_frame = repaint_img_tensor[0,:,0]  # c h w
             clip_image_pil = TF.to_pil_image((first_frame * 255).byte())
             full_ref = get_image_latent(clip_image_pil, sample_size=args.sample_size)
-
-
     
+
     pipe.apply_tracking(
         fps=fps,
         tracking_tensor=tracking_tensor,
@@ -408,11 +406,10 @@ if __name__ == "__main__":
         inpaint_video_mask   = inpaint_video_mask,        
         prompt=args.prompt,
         checkpoint_path=args.checkpoint_path,
-        transformer_path=args.transformer_path,
         num_inference_steps=args.num_inference_steps,
         height = args.sample_size[0],
         width = args.sample_size[1],
         video_length = args.video_length,
         density = args.density,
-        seed = 42,
+        seed = 1245644,
     )

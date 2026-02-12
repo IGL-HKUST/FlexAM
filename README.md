@@ -42,8 +42,8 @@
     ```
 
 4. Manually download these checkpoints to `checkpoints/`:
-   - DELTA checkpoint: [Google Drive](https://drive.google.com/drive/folders/1UtzUJLPhJdUg2XvemXXz1oe6KUQKVjsZ).
-   - Our *FlexAM* checkpoint: https://huggingface.co/EXCAI/Diffusion-As-Shader
+   - DELTA checkpoint: [Google Drive](https://drive.google.com/file/d/18d5M3nl3AxbG4ZkT7wssvMXZXbmXrnjz/view?usp=sharing).
+   - Our *FlexAM* checkpoint: https://huggingface.co/SandwichZ/Wan2.2-Fun-5B-FLEXAM
 
 
 ### Inference
@@ -55,13 +55,7 @@ The inference code was tested on
 - PyTorch 2.5.1
 - 1 NVIDIA A800 with CUDA version 12.1. 
 
-We provide a inference script for our tasks. You can run the `demo.py` script directly as follows.
-
-#### Comfyui
-<!-- We release the gradio interface for our tasks. You can run the `webui.py` script directly as follows.
-```
-python webui.py --gpu <gpu_id>
-``` -->
+We provide a inference script for our tasks. Please refer to 'run_demo.sh' to run the `demo.py` script.
 
 Or you can run these tasks one by one as follows.
 
@@ -72,7 +66,7 @@ Or you can run these tasks one by one as follows.
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
-    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
+    --checkpoint_path <model_path> \ # FlexAM checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
     --output_dir <output_dir> \ # output directory
     --input_path <input_path> \ # the reference video path
     --repaint <True/repaint_path > \ # the repaint first frame image path of input source video or use FLUX to repaint the first frame \
@@ -89,15 +83,15 @@ python demo.py \
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
-    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
+    --checkpoint_path <model_path> \ # FlexAM checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
     --output_dir <output_dir> \ # output directory
     --input_path <input_path> \ # the reference video path
     --repaint <True/repaint_path > \ # the repaint first frame image path of input source video or use FLUX to repaint the first frame \
     --mask_path <mask_path> \ # White (255) represents the foreground to be edited, and black (0) remains unchanged
     --video_length=97 \ 
     --sample_size 512 896 \
-    --generate_type='foreground_edit' \
-    --dilation_pixels=30 \ Dilation pixels for mask processing in foreground_edit mode
+    --generate_type='foreground_edit' \ 
+    --dilation_pixels=30 \ # Dilation pixels for mask processing in foreground_edit mode
     --density 10 \ # Control the sparsity of tracking points
     --gpu <gpu_id> \ # the gpu id
 ```
@@ -107,7 +101,7 @@ python demo.py \
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
-    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
+    --checkpoint_path <model_path> \ # FlexAM checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
     --output_dir <output_dir> \ # output directory
     --input_path <input_path> \ # the reference video path
     --repaint <True/repaint_path > \ # the repaint first frame image path of input source video or use FLUX to repaint the first frame \
@@ -130,7 +124,7 @@ We provide several template camera motion types, you can choose one of them. In 
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
-    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
+    --checkpoint_path <model_path> \ # FlexAM checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
     --output_dir <output_dir> \ # output directory
     --input_path <input_path> \ # the reference image or video path
     --camera_motion <camera_motion> \ # the camera motion type, see examples below
@@ -177,7 +171,7 @@ Notes:
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
-    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
+    --checkpoint_path <model_path> \ # FlexAM checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
     --output_dir <output_dir> \ # output directory
     --input_path <input_path> \ # the reference image or video path
     --camera_motion "path" \ # if camera motion type is "path", --pose_file is needed
@@ -195,7 +189,7 @@ python demo.py \
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
-    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
+    --checkpoint_path <model_path> \ # FlexAM checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
     --output_dir <output_dir> \ # output directory
     --input_path <input_path> \ # the reference image or video path
     --camera_motion "path" \ # if camera motion type is "path", --pose_file is needed
@@ -215,7 +209,7 @@ We provide several template object manipulation types, you can choose one of the
 ```python
 python demo.py \
     --prompt <"prompt text"> \ # prompt text
-    --checkpoint_path <model_path> \ # wan_2.2_control_ref checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
+    --checkpoint_path <model_path> \ # FlexAM checkpoint path (e.g checkpoints/Diffusion_Transformer/Wan2.2-Fun-5B-FLEXAM)
     --input_path <input_path> \ # the reference image path
     --object_motion <object_motion> \ # the object motion type (up, down, left, right)
     --object_mask <object_mask_path> \ # the object mask path

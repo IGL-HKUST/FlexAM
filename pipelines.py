@@ -1380,8 +1380,8 @@ class FlexAMPipeline:
             upsample_factor=4
         )
         
-        print(f"Loading checkpoint from {os.path.join(project_root, 'checkpoints/densetrack3d.pth')}")
-        with open(os.path.join(project_root, 'checkpoints/densetrack3d.pth'), "rb") as f:
+        print(f"Loading checkpoint from {os.path.join(project_root, 'checkpoints/Wan2.2-Fun-5B-FLEXAM/densetrack3d.pth')}")
+        with open(os.path.join(project_root, 'checkpoints/Wan2.2-Fun-5B-FLEXAM/densetrack3d.pth'), "rb") as f:
             state_dict = torch.load(f, map_location="cpu")
             if "model" in state_dict:
                 state_dict = state_dict["model"]

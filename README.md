@@ -3,7 +3,7 @@
 ![teaser](assets/teaser.gif)
 
 ## NEWS:
-- Dec 20, 2025: inference code and comfyui
+- Feb 13, 2026: inference code and comfyui
 
 ## Quickstart
 
@@ -42,7 +42,6 @@
     ```
 
 4. Manually download these checkpoints to `checkpoints/`:
-   - DELTA checkpoint: [Google Drive](https://drive.google.com/file/d/18d5M3nl3AxbG4ZkT7wssvMXZXbmXrnjz/view?usp=sharing).
    - Our *FlexAM* checkpoint: https://huggingface.co/SandwichZ/Wan2.2-Fun-5B-FLEXAM
 
 

@@ -323,7 +323,7 @@ class VideoToTrackingPredict:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # 1. 模型路径处理
-        possible_folders = ["Fun_Models/Third_Party", "checkpoints", "DELTA"]
+        possible_folders = ["Fun_Models/Wan2.2-Fun-5B-FLEXAM","Fun_Models/Third_Party", "checkpoints", "DELTA"]
         densetrack_path = "densetrack3d.pth"
 
         found_path = None
@@ -334,7 +334,7 @@ class VideoToTrackingPredict:
                 break
 
         if found_path is None:
-            local_checkpoint = os.path.join(project_root, 'checkpoints', 'densetrack3d.pth')
+            local_checkpoint = os.path.join(project_root, 'checkpoints', 'Wan2.2-Fun-5B-FLEXAM', 'densetrack3d.pth')
             if os.path.exists(local_checkpoint):
                 found_path = local_checkpoint
             else:

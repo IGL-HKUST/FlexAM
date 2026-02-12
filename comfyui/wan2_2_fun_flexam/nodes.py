@@ -179,7 +179,7 @@ class LoadWan2_2FunModel_FlexAM:
                         'Wan2.2-Fun-5B-Control-Camera',
                     ],
                     {
-                        "default": 'Wan2.2-Fun-5B-Control',
+                        "default": 'Wan2.2-Fun-5B-FLEXAM',
                     }
                 ),
                 "model_type": (

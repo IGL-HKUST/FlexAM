@@ -396,7 +396,7 @@ def get_image_to_video_latent(validation_image_start, validation_image_end, vide
 
     return  input_video, input_video_mask, clip_image
 
-def get_video_to_video_latent(input_video_path, video_length, sample_size, fps=None, validation_video_mask=None, ref_image=None):
+def get_video_to_video_latent(input_video_path, video_length, sample_size, fps=None, validation_video_mask=None, ref_image=None, if_restore_255=False):
     if input_video_path is not None:
         if isinstance(input_video_path, str):
             cap = cv2.VideoCapture(input_video_path)
@@ -430,6 +430,9 @@ def get_video_to_video_latent(input_video_path, video_length, sample_size, fps=N
                     align_corners=False
                 ).permute(0, 2, 3, 1)
                 input_video = input_video.cpu().numpy()
+                # Restore 0-1 range to 0-255 range since it will be divided by 255 later
+                if if_restore_255:
+                    input_video = input_video * 255
 
         input_video = torch.from_numpy(np.array(input_video))[:video_length]
         input_video = input_video.permute([3, 0, 1, 2]).unsqueeze(0) / 255

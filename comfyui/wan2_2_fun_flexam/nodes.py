@@ -583,12 +583,12 @@ class Wan2_2FunV2VSampler_FlexAM:
                 input_video, input_video_mask = None, None
             else:
                 control_camera_video = None
-                input_video, input_video_mask, _, _ = get_video_to_video_latent(control_video, video_length=video_length, sample_size=(height, width), fps=16, ref_image=None)
-                depth_video, depth_video_mask, _, _ = get_video_to_video_latent(depth_video, video_length=video_length, sample_size=(height, width), fps=16, ref_image=None)
-                cos_video0, cos_video0_mask, _, _ = get_video_to_video_latent(cos_video0, video_length=video_length, sample_size=(height, width), fps=16, ref_image=None)
-                cos_video1, cos_video1_mask, _, _ = get_video_to_video_latent(cos_video1, video_length=video_length, sample_size=(height, width), fps=16, ref_image=None)
-                cos_video2, cos_video2_mask, _, _ = get_video_to_video_latent(cos_video2, video_length=video_length, sample_size=(height, width), fps=16, ref_image=None)
-                cos_video3, cos_video3_mask, _, _ = get_video_to_video_latent(cos_video3, video_length=video_length, sample_size=(height, width), fps=16, ref_image=None)
+                input_video, input_video_mask, _, _ = get_video_to_video_latent(control_video, video_length=video_length, sample_size=(height, width), fps=16, ref_image=None, if_restore_255=True)
+                depth_video, depth_video_mask, _, _ = get_video_to_video_latent(depth_video, video_length=video_length, sample_size=(height, width), fps=16, ref_image=None, if_restore_255=True)
+                cos_video0, cos_video0_mask, _, _ = get_video_to_video_latent(cos_video0, video_length=video_length, sample_size=(height, width), fps=16, ref_image=None, if_restore_255=True)
+                cos_video1, cos_video1_mask, _, _ = get_video_to_video_latent(cos_video1, video_length=video_length, sample_size=(height, width), fps=16, ref_image=None, if_restore_255=True)
+                cos_video2, cos_video2_mask, _, _ = get_video_to_video_latent(cos_video2, video_length=video_length, sample_size=(height, width), fps=16, ref_image=None, if_restore_255=True)
+                cos_video3, cos_video3_mask, _, _ = get_video_to_video_latent(cos_video3, video_length=video_length, sample_size=(height, width), fps=16, ref_image=None, if_restore_255=True)
                 cos_video_dict = {0: cos_video0, 1: cos_video1, 2: cos_video2, 3: cos_video3}
          
 

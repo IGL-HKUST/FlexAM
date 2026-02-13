@@ -1,60 +1,106 @@
+<div align="center">
+
 # FlexAM: Flexible Appearance-Motion Decomposition for Versatile Video Generation Control
+
+<a href="https://arxiv.org/abs/2602.xxxxx"><img src="https://img.shields.io/badge/arXiv-2602.xxxxx-b31b1b.svg" alt="arXiv"></a>
+<a href="https://huggingface.co/SandwichZ/Wan2.2-Fun-5B-FLEXAM"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-yellow" alt="Hugging Face"></a>
+<a href="assets/flexam_workflow.json"><img src="https://img.shields.io/badge/ComfyUI-Download_Workflow-4fd63d" alt="ComfyUI"></a>
+
+<br>
+<br>
+
+Mingzhi Sheng<sup>1*</sup>, Zekai Gu<sup>2*</sup>, Peng Li<sup>2</sup>, Cheng Lin<sup>3</sup>, Hao-Xiang Guo<sup>4</sup>, Ying-Cong Chen<sup>1,2†</sup>, Yuan Liu<sup>2†</sup>
+
+<br>
+
+<sup>1</sup>HKUST(GZ), <sup>2</sup>HKUST, <sup>3</sup>MUST, <sup>4</sup>Tsinghua University
+<br>
+<small><sup>*</sup>Equal Contribution, <sup>†</sup>Corresponding Authors</small>
+
+</div>
+
+<br>
 
 ![teaser](assets/teaser.gif)
 
-## NEWS:
-- Feb 13, 2026: inference code and comfyui
-
-## Quickstart
-
-### Create environment
-1. Clone the repository and create conda environment: 
-
-    ```
-    git clone https://github.com/Sandwich-2020/FlexAM.git
-    conda create -n flexam python=3.10
-    conda activate flexam
-    ```
-
-2. Install pytorch, we recommend `Pytorch 2.5.1` with `CUDA 12.1`:
-
-    ```
-    pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
-    ```
+## 📰 News
+- **[2026.02.13]** 🚀 We have released the inference code and **ComfyUI** support!
+- **[2026.02.14]** 📄 The paper is available on arXiv.
 
 
-3. Make sure the submodule and requirements are installed:
-    ```
-    mkdir -p submodules
-    git submodule update --init --recursive
-    pip install -r requirements.txt
-    ```
-    If the submodules are not installed, you need to manually download them and move them to `submodules/`. Run the following commands to install the submodules:
-    ```
-    # DELTA
-    git clone https://github.com/snap-research/DELTA_densetrack3d.git submodules/MoGe
-    # Pi3
-    git clone https://github.com/yyfz/Pi3.git submodules/Pi3
-    # MoGe
-    git clone https://github.com/microsoft/MoGe.git submodules/MoGe
-    # VGGT
-    git clone https://github.com/facebookresearch/vggt.git submodules/vggt
-    ```
+## 🛠️ Installation  
+> 📢 **System Requirements**: Both the official Python inference code and the ComfyUI workflow were tested on **Ubuntu 20.04** with **Python 3.10**, **PyTorch 2.5.1**, and **CUDA 12.1** on an **NVIDIA A800** GPU.
 
-4. Manually download these checkpoints to `checkpoints/`:
-   - Our *FlexAM* checkpoint: https://huggingface.co/SandwichZ/Wan2.2-Fun-5B-FLEXAM
+Before running any inference (Python or ComfyUI), please setup the environment and download the checkpoints.  
+
+### 1. Create environment
+ Clone the repository and create conda environment: 
+
+```
+git clone https://github.com/IGL-HKUST/FlexAM
+conda create -n flexam python=3.10
+conda activate flexam
+```
+
+Install pytorch, we recommend `Pytorch 2.5.1` with `CUDA 12.1`:
+
+ ```
+pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
+```
+```
+pip install -r requirements.txt
+```
+### 2. Download Submodules
+ We rely on several external modules (MoGe, Pi3, etc.).
+ 
+```
+mkdir -p submodules
+git submodule update --init --recursive
+pip install -r requirements.txt
+```
+<details> 
+<summary><em>(Optional) Manual clone if submodule update fails</em></summary>
+```
+# DELTA
+git clone https://github.com/snap-research/DELTA_densetrack3d.git submodules/MoGe
+# Pi3
+git clone https://github.com/yyfz/Pi3.git submodules/Pi3
+# MoGe
+git clone https://github.com/microsoft/MoGe.git submodules/MoGe
+# VGGT
+git clone https://github.com/facebookresearch/vggt.git submodules/vggt
+```
+</details>
+
+### 3. Download checkpoints
+Download the FlexAM checkpoint and place it in the`checkpoints/` directory.
+
+- HuggingFace Link: [Wan2.2-Fun-5B-FLEXAM](https://huggingface.co/SandwichZ/Wan2.2-Fun-5B-FLEXAM)
 
 
-### Inference
 
-The inference code was tested on
+## 🚀 Inference
+We provide two ways to use FlexAM: Python Script and ComfyUI.
 
-- Ubuntu 20.04
-- Python 3.10
-- PyTorch 2.5.1
-- 1 NVIDIA A800 with CUDA version 12.1. 
+### Option A: ComfyUI Integration
+We provide a native node for seamless integration into ComfyUI workflows.
+> ⚠️ **Note**: Currently, the ComfyUI node supports **Motion Transfer**, **Foreground Edit**, and **Background Edit**. For *Camera Control* and *Object Manipulation*, please use the Python script.
+#### 1. Install Node
+Since we are not yet in the Manager, please install manually:
+```
+cd ComfyUI/custom_nodes/
+git clone https://github.com/IGL-HKUST/FlexAM
+cd FlexAM
+pip install -r requirements.txt
+```
+#### 2. Run Workflow
+- Step 1: Download the workflow JSON: [workflow.json](assets/flexam_workflow.json)
+- Step 2: Drag and drop it into ComfyUI.
+- Step 3: Ensure checkpoints are in `ComfyUI/models/checkpoints`.
 
-We provide a inference script for our tasks. Please refer to 'run_demo.sh' to run the `demo.py` script.
+### Option B: Python Script
+
+We provide a inference script for our tasks. Please refer to `run_demo.sh` to run the `demo.py` script.
 
 Or you can run these tasks one by one as follows.
 
@@ -221,7 +267,7 @@ python demo.py \
 It should be noted that depending on the tracker you choose, you may need to modify the scale of translation.
 
 
-## Acknowledgements
+## 🙏 Acknowledgements
 
 This project builds upon several excellent open source projects:
 
@@ -237,6 +283,10 @@ This project builds upon several excellent open source projects:
 
 We thank the authors and contributors of these projects for their valuable contributions to the open source community!
 
+## 🌟 Citation
+If you find FlexAM useful for your research, please cite our paper:
+```
 
+```
 
 

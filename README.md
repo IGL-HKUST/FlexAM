@@ -2,7 +2,7 @@
 
 # FlexAM: Flexible Appearance-Motion Decomposition for Versatile Video Generation Control
 
-<a href="https://arxiv.org/abs/2602.xxxxx"><img src="https://img.shields.io/badge/arXiv-2602.xxxxx-b31b1b.svg" alt="arXiv"></a>
+<a href="https://arxiv.org/abs/2602.13185"><img src="https://img.shields.io/badge/arXiv-2602.xxxxx-b31b1b.svg" alt="arXiv"></a>
 <a href="https://huggingface.co/SandwichZ/Wan2.2-Fun-5B-FLEXAM"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-yellow" alt="Hugging Face"></a>
 <a href="assets/flexam_workflow.json"><img src="https://img.shields.io/badge/ComfyUI-Download_Workflow-4fd63d" alt="ComfyUI"></a>
 

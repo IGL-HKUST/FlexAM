@@ -24,8 +24,8 @@ Mingzhi Sheng<sup>1*</sup>, Zekai Gu<sup>2*</sup>, Peng Li<sup>2</sup>, Cheng Li
 ![teaser](assets/teaser.gif)
 
 ## 📰 News
-- **[2026.02.13]** 🚀 We have released the inference code and **ComfyUI** support!
 - **[2026.02.14]** 📄 The paper is available on arXiv.
+- **[2026.02.13]** 🚀 We have released the inference code and **ComfyUI** support!
 
 
 ## 🛠️ Installation  
@@ -286,7 +286,15 @@ We thank the authors and contributors of these projects for their valuable contr
 ## 🌟 Citation
 If you find FlexAM useful for your research, please cite our paper:
 ```
-
+@misc{sheng2026FlexAM,
+  title={FlexAM: Flexible Appearance-Motion Decomposition for Versatile Video Generation Control},
+  author={Sheng, Mingzhi and Gu, Zekai and Li, Peng and Lin, Cheng and Guo, Hao-Xiang and Chen, Ying-Cong and Liu, Yuan},
+  year={2026},
+  eprint={2602.13185},
+  archivePrefix={arXiv},
+  primaryClass={cs.CV},
+  url={https://arxiv.org/abs/2602.13185},
+}
 ```
 
 

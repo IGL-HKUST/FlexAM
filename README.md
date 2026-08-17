@@ -2,6 +2,7 @@
 
 # FlexAM: Flexible Appearance-Motion Decomposition for Versatile Video Generation Control
 
+<a href="https://flexam-project.github.io/"><img src="https://img.shields.io/badge/Project-Page-7357c7.svg" alt="Project Page"></a>
 <a href="https://arxiv.org/abs/2602.13185"><img src="https://img.shields.io/badge/arXiv-2602.13185-b31b1b.svg" alt="arXiv"></a>
 <a href="https://huggingface.co/SandwichZ/Wan2.2-Fun-5B-FLEXAM"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-yellow" alt="Hugging Face"></a>
 <a href="assets/flexam_workflow.json"><img src="https://img.shields.io/badge/ComfyUI-Download_Workflow-4fd63d" alt="ComfyUI"></a>
@@ -24,6 +25,7 @@ Mingzhi Sheng<sup>1*</sup>, Zekai Gu<sup>2*</sup>, Peng Li<sup>2</sup>, Cheng Li
 ![teaser](assets/teaser.gif)
 
 ## 📰 News
+- 🎉 **FlexAM has been accepted to ECCV 2026!**
 - **[2026.02.14]** 📄 The paper is available on arXiv.
 - **[2026.02.13]** 🚀 We have released the inference code and **ComfyUI** support!
 
@@ -296,5 +298,3 @@ If you find FlexAM useful for your research, please cite our paper:
   url={https://arxiv.org/abs/2602.13185},
 }
 ```
-
-
